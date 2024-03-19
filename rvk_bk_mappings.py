@@ -5,14 +5,14 @@ def get_current_mappings(): # Finde vorhandene Mappings, die Teil einer Konkorda
  rk_data = rk.json()
  global mapping_dict
  mapping_dict = {}
- no_possible_mapping = []
+ no_possible_mapping = [] #Wird nicht genutzt. Vielleicht später um weiter zu filtern.
  for item in rk_data:
-  try:
+  try: #Einige RVK-BK Mappings haben keine BK Notation um zu zeigen, dass kein Mapping möglich ist.
    bk_uri = item["to"]['memberSet'][0]['uri']
-   bk_notation = bk_uri.replace("http://uri.gbv.de/terminology/bk/", "")
-   has_mapping = item["from"]['memberSet'][0]['notation'][0]
-   relation = item["type"][0]
-   if has_mapping in mapping_dict:
+   bk_notation = bk_uri.replace("http://uri.gbv.de/terminology/bk/", "") #Da 2 Mappings kein notation Feld für BK haben wird die Notation über die URI ermittelt.
+   has_mapping = item["from"]['memberSet'][0]['notation'][0] #RVK Notation
+   relation = item["type"][0] #Relation zwischen den Notationen
+   if has_mapping in mapping_dict: #Dictionary wird angelegt
     if bk_notation in mapping_dict[has_mapping]:
      mapping_dict[has_mapping][bk_notation].append(relation)
     else:
@@ -29,19 +29,19 @@ def replace_characters(input_string): #RVK Notation für die API nutzbar machen
 
 def rvk_bk_process(rk_data, no_mapping):
  for item in rk_data: # Schleife durch die Konzepte
-  notation = item['notation'][0] # z.B. "AV"
+  notation = item['notation'][0] # nächst tiefere Notation
   if notation not in mapping_dict: # Notation hat noch kein Mapping
    no_mapping.append(notation)
   else:
-   for key, value in mapping_dict[notation].items():
-    if key in bk_narrowest and (value == "http://www.w3.org/2004/02/skos/core#narrowMatch" or value == "http://www.w3.org/2004/02/skos/core#exactMatch"): #wenn keine BK Untergruppe und narrow/exact Match
+   for key, value in mapping_dict[notation].items(): #Nicht tiefer gehen wenn keine BK Untergruppe existiert und es ein narrow/exact Match ist
+    if key in bk_narrowest and (value == "http://www.w3.org/2004/02/skos/core#narrowMatch" or value == "http://www.w3.org/2004/02/skos/core#exactMatch"):
      continue
   url_notation = replace_characters(notation)
   if url_notation:
    rvk_bk(url_notation, no_mapping) #Rekursion für alle Unterbegruppen
  return no_mapping
 
-def rvk_bk(url_notation, no_mapping): #url_notation = z.B. "A"
+def rvk_bk(url_notation, no_mapping):
  rk = requests.get('https://coli-conc.gbv.de/api/concepts/narrower?uri=http://rvk.uni-regensburg.de/nt/'+url_notation) #Unterbegruppen
  rk_data = rk.json()
  rvk_bk_process(rk_data, no_mapping)
@@ -54,10 +54,10 @@ def start():
  rvk_bk_process(rk_data, no_mapping)
  return no_mapping
 
-with open('narrowest.txt', 'r') as file:
+with open('narrowest.txt', 'r') as file: #Datei mit einer Liste der niedrigsten Untergruppen in der BK
     bk_narrowest = file.read()
 no_mapping = start()
-print("Fehlende mappings:", no_mapping)
+print("Fehlende mappings:", len(no_mapping))
 print("Vorhandene mappings:", mapping_dict.keys())
 
 with open("rvk_bk_mapping_vorhanden.txt", "w") as file:
