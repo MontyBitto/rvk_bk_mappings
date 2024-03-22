@@ -1,6 +1,3 @@
-"""
-TODO: Make only 1 file. Order the contents of the file.
-"""
 import requests
 import csv
 
