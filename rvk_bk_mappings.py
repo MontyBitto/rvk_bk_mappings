@@ -1,17 +1,20 @@
 import requests
+import csv
 
-def get_current_mappings(): # Finde vorhandene Mappings, die Teil einer Konkordanz sind
- rk = requests.get('https://coli-conc.gbv.de/api/mappings?fromScheme=http%3A%2F%2Fbartoc.org%2Fen%2Fnode%2F533&toScheme=http%3A%2F%2Fbartoc.org%2Fen%2Fnode%2F18785&partOf=any&limit=100000')
+def get_other_direction(mapping_data):
+ rk = requests.get('https://coli-conc.gbv.de/api/mappings?fromScheme=http%3A%2F%2Fbartoc.org%2Fen%2Fnode%2F18785&toScheme=http%3A%2F%2Fbartoc.org%2Fen%2Fnode%2F533&limit=10000')
  rk_data = rk.json()
- global mapping_dict
- mapping_dict = {}
- no_possible_mapping = [] #Wird nicht genutzt. Vielleicht später um weiter zu filtern.
  for item in rk_data:
   try: #Einige RVK-BK Mappings haben keine BK Notation um zu zeigen, dass kein Mapping möglich ist.
-   bk_uri = item["to"]['memberSet'][0]['uri']
-   bk_notation = bk_uri.replace("http://uri.gbv.de/terminology/bk/", "") #Da 2 Mappings kein notation Feld für BK haben wird die Notation über die URI ermittelt.
-   has_mapping = item["from"]['memberSet'][0]['notation'][0] #RVK Notation
+   has_mapping = item["to"]['memberSet'][0]['notation'][0]
+   bk_notation = item["from"]['memberSet'][0]['notation'][0] #RVK Notation
    relation = item["type"][0] #Relation zwischen den Notationen
+   relation = relation.replace("http://www.w3.org/2004/02/skos/core#", "")
+   if relation == "broadMatch":
+    relation = "narrowMatch"
+   elif relation == "narrowMatch":
+    relation = "broadMatch"
+   mapping_data.append([has_mapping, bk_notation, relation])
    if has_mapping in mapping_dict: #Dictionary wird angelegt
     if bk_notation in mapping_dict[has_mapping]:
      mapping_dict[has_mapping][bk_notation].append(relation)
@@ -20,7 +23,37 @@ def get_current_mappings(): # Finde vorhandene Mappings, die Teil einer Konkorda
    else:
     mapping_dict[has_mapping] = {bk_notation: [relation]}
   except IndexError:
-   no_possible_mapping.append(item["from"]['memberSet'][0]['notation'][0])
+   pass
+ return mapping_data
+
+def get_current_mappings(): # Finde vorhandene Mappings, die Teil einer Konkordanz sind
+ rk = requests.get('https://coli-conc.gbv.de/api/mappings?fromScheme=http%3A%2F%2Fbartoc.org%2Fen%2Fnode%2F533&toScheme=http%3A%2F%2Fbartoc.org%2Fen%2Fnode%2F18785&partOf=any&limit=100000')
+ rk_data = rk.json()
+ global mapping_dict
+ mapping_dict = {}
+ mapping_data = []
+ for item in rk_data:
+  try: #Einige RVK-BK Mappings haben keine BK Notation um zu zeigen, dass kein Mapping möglich ist.
+   bk_uri = item["to"]['memberSet'][0]['uri']
+   has_mapping = item["from"]['memberSet'][0]['notation'][0] #RVK Notation
+   bk_notation = bk_uri.replace("http://uri.gbv.de/terminology/bk/", "") #Da 2 Mappings kein notation Feld für BK haben wird die Notation über die URI ermittelt.
+   relation = item["type"][0] #Relation zwischen den Notationen
+   relation = relation.replace("http://www.w3.org/2004/02/skos/core#", "")
+   mapping_data.append([has_mapping, bk_notation, relation])
+   if has_mapping in mapping_dict: #Dictionary wird angelegt
+    if bk_notation in mapping_dict[has_mapping]:
+     mapping_dict[has_mapping][bk_notation].append(relation)
+    else:
+     mapping_dict[has_mapping][bk_notation] = [relation]
+   else:
+    mapping_dict[has_mapping] = {bk_notation: [relation]}
+  except IndexError:
+   pass
+ mapping_data = get_other_direction(mapping_data)
+ with open('rvk_bk_mapping_vorhanden.tsv', mode='w', newline='', encoding='utf-8') as file:
+  writer = csv.writer(file, delimiter='\t')
+  writer.writerow(['RVK Notation', 'BK Notation', 'Relation'])  # Header row
+  writer.writerows(mapping_data)
  return
 
 def replace_characters(input_string): #RVK Notation für die API nutzbar machen
@@ -34,7 +67,7 @@ def rvk_bk_process(rk_data, no_mapping):
    no_mapping.append(notation)
   else:
    for key, value in mapping_dict[notation].items(): #Nicht tiefer gehen wenn keine BK Untergruppe existiert und es ein narrow/exact Match ist
-    if key in bk_narrowest and (value == "http://www.w3.org/2004/02/skos/core#narrowMatch" or value == "http://www.w3.org/2004/02/skos/core#exactMatch"):
+    if key in bk_narrowest and (value == "narrowMatch" or value == "exactMatch"):
      continue
   url_notation = replace_characters(notation)
   if url_notation:
@@ -55,12 +88,13 @@ def start():
  return no_mapping
 
 with open('narrowest.txt', 'r') as file: #Datei mit einer Liste der niedrigsten Untergruppen in der BK
-    bk_narrowest = file.read()
+ bk_narrowest = file.read()
 no_mapping = start()
-print("Fehlende mappings:", len(no_mapping))
+print("Fehlende mappings:", no_mapping)
 print("Vorhandene mappings:", mapping_dict.keys())
 
-with open("rvk_bk_mapping_vorhanden.txt", "w") as file:
-    file.write("Has mapping: {}\n".format(mapping_dict.keys()))
-with open("rvk_bk_kein_mapping.txt", "w") as file:
-    file.write("No mapping: {}\n".format(no_mapping))
+with open("rvk_bk_kein_mapping.tsv", "w", newline='') as file:
+ writer = csv.writer(file, delimiter='\t')
+ writer.writerow(['RVK Notation'])
+ for item in no_mapping:
+  writer.writerow([item])
