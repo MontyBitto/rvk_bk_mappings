@@ -53,6 +53,7 @@ def get_current_mappings(): # Finde vorhandene Mappings, die Teil einer Konkorda
   except IndexError:
    pass
  mapping_data = get_other_direction(mapping_data)
+ mapping_data.sort(key=lambda x: x[0])
  with open('rvk_bk_mapping_vorhanden.tsv', mode='w', newline='', encoding='utf-8') as file:
   writer = csv.writer(file, delimiter='\t')
   writer.writerow(['RVK Notation', 'BK Notation', 'Relation'])  # Header row
@@ -93,8 +94,7 @@ def start():
 with open('narrowest.txt', 'r') as file: #Datei mit einer Liste der niedrigsten Untergruppen in der BK
  bk_narrowest = file.read()
 no_mapping = start()
-print("Fehlende mappings:", no_mapping)
-print("Vorhandene mappings:", mapping_dict.keys())
+no_mapping.sort()
 
 with open("rvk_bk_kein_mapping.tsv", "w", newline='') as file:
  writer = csv.writer(file, delimiter='\t')
