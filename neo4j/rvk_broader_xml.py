@@ -1,3 +1,4 @@
+import sys
 from lxml import etree
 
 def extract_notations(node, parent=""):
@@ -6,16 +7,19 @@ def extract_notations(node, parent=""):
         notation = node.attrib['notation']
         notations.append([notation, parent])
     else:
-        notation = parent  # Pass down the parent notation if current node has none
+        notation = parent
     for child in node:
         notations.extend(extract_notations(child, notation))
     return notations
 
-# Parse the XML file
-tree = etree.parse("rvko_2024_1.xml")
-root = tree.getroot()
+xml_data = sys.stdin.buffer.read()
 
-# Extract notations
+xml_str = xml_data.decode('utf-8')
+if xml_str.startswith('<?xml'):
+    xml_str = xml_str.split('?>', 1)[1]
+
+tree = etree.fromstring(xml_str)
+root = tree
 notations = extract_notations(root)
 
 for narrower, broader in notations:
