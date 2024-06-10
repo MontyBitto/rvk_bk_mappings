@@ -52,6 +52,7 @@ def get_current_mappings():  # Finde vorhandene Mappings, die Teil einer Konkord
     mapping_dict = {}
     for item in rk_data:
         process_item(item, reverse_relation=False)
+    get_other_direction()
     return
 
 
@@ -60,7 +61,7 @@ def replace_characters(input_string): #RVK Notation für die API nutzbar machen
   replaced_string = input_string.replace(",", "%2C").replace(" ", "%2520")
   return replaced_string
 
-def rvk_bk_process(rk_data, mapping_data, stack, level):
+def rvk_bk_process(rk_data, mapping_data, stack, level, broader):
   for item in rk_data: # Schleife durch die Konzepte
     notation = item['notation'][0] # nächst tiefere Notation
     if "http://rdf-vocabulary.ddialliance.org/xkos#CombinedConcept" in item["type"]:
@@ -70,7 +71,7 @@ def rvk_bk_process(rk_data, mapping_data, stack, level):
 
     temp = []
     if (stack == [] or stack[-1] == []) and notation not in mapping_dict: # Notation hat noch kein Mapping
-      mapping_data.append([level, notation, type, "", "", "", ""])
+      mapping_data.append([level, notation, type, "", "", "", "", broader])
 
     if notation in mapping_dict: # Notation hat ein Mapping
       for bk_not, bk in mapping_dict[notation].items():
@@ -78,28 +79,28 @@ def rvk_bk_process(rk_data, mapping_data, stack, level):
         for relation_mapping in bk:
           relation = relation_mapping[0]
           mapping_uri = relation_mapping[1]
-          mapping_data.append([level, notation, type, "", bk_notation, relation, mapping_uri])
+          mapping_data.append([level, notation, type, "", bk_notation, relation, mapping_uri, broader])
           if bk_notation in bk_narrowest: #Wenn die BK Notation auf dem niedrigsten level ist wird das Mapping auch für die niedrigeren RVK Notationen "indirekt" verwendet.
             temp.append(["yes", bk_notation, relation, mapping_uri])
     if stack:
       for sta in stack[-1]:
         if sta not in temp:
-          mapping_data.append([level, notation, type, sta[0], sta[1], sta[2], sta[3]])
+          mapping_data.append([level, notation, type, sta[0], sta[1], sta[2], sta[3], broader])
           temp.append(sta)
     stack.append(temp)
     url_notation = replace_characters(notation)
     if url_notation:
-      rvk_bk(url_notation, mapping_data, stack, level +1) #Rekursion für alle Unterbegruppen
+      rvk_bk(url_notation, mapping_data, stack, level +1, notation) #Rekursion für alle Unterbegruppen
     if stack:
       stack.pop()
   return mapping_data
 
-def rvk_bk(url_notation, mapping_data, stack, level):
+def rvk_bk(url_notation, mapping_data, stack, level, broader):
   rk = requests.get('https://coli-conc.gbv.de/rvk/api/narrower?uri=http%3A%2F%2Frvk.uni-regensburg.de%2Fnt%2F'+url_notation) #Unterbegruppen
   rk_data = rk.json()
   rk_data = sorted(rk_data, key=lambda x: x['notation'][0]) # Spätere sortierung würde z. B. UB 1070 - UB 1107 nach UB 1070 haben. Später wäre mit RegEx möglich.
 
-  rvk_bk_process(rk_data, mapping_data, stack, level)
+  rvk_bk_process(rk_data, mapping_data, stack, level, broader)
 
 def start():
   if args.dry: #Nur die RVK Notationen
@@ -109,6 +110,7 @@ def start():
     get_current_mappings()
   mapping_data = []
   if args.notation is None: # Starte am Anfang
+    notation = ""
     rk = requests.get('https://coli-conc.gbv.de/api/voc/top?uri=http://uri.gbv.de/terminology/rvk/') #Hauptgruppen
   else: # Starte bei der eingegeben Notation (nicht einschliesslich)
     notation = args.notation
@@ -116,7 +118,7 @@ def start():
     rk = requests.get('https://coli-conc.gbv.de/rvk/api/narrower?uri=http%3A%2F%2Frvk.uni-regensburg.de%2Fnt%2F'+ url_notation)
   rk_data = rk.json()
   rk_data = sorted(rk_data, key=lambda x: x['notation'][0])
-  rvk_bk_process(rk_data, mapping_data, [], 0)
+  rvk_bk_process(rk_data, mapping_data, [], 0, notation)
   return mapping_data
 
 parser = argparse.ArgumentParser()
@@ -132,5 +134,5 @@ with open('bk_narrowest.csv', 'r') as file: #Datei mit einer Liste der niedrigst
 
 with open('rvk_bk_mappings.tsv', mode='w', newline='', encoding='utf-8') as file:
   writer = csv.writer(file, delimiter='\t')
-  writer.writerow(['RVK Notation', 'Notation Type', 'indirekt', 'BK Notation', 'Relation Type', 'URI'])  # Header
+  writer.writerow(['Level', 'RVK Notation', 'Notation Type', 'indirekt', 'BK Notation', 'Relation Type', 'URI', 'Broader Notation'])  # Header
   writer.writerows(mapping_data)
