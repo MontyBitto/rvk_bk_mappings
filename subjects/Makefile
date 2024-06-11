@@ -1,4 +1,7 @@
-default: bk__default.jskos.ndjson kxp-subjects.pg some-subjects.pg some-subjects.csv
+default: rvko_xml.zip bk__default.jskos.ndjson kxp-subjects.pg some-subjects.pg some-subjects.csv
+
+rvko_xml.zip:
+	wget https://rvk.uni-regensburg.de/downloads/rvko_xml.zip
 
 bk__default.jskos.ndjson:
 	wget https://api.dante.gbv.de/export/download/bk/default/bk__default.jskos.ndjson
