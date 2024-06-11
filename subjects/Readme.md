@@ -3,7 +3,6 @@
 ## Dependencies
 - pip install requests
 - https://github.com/pg-format/pgraphs/
-- bk__default.jskos.ndjson von https://api.dante.gbv.de/export/download/bk/default/
 - rvko_xml.zip von https://rvk.uni-regensburg.de/regensburger-verbundklassifikation-online/rvk-download
 - kxp-subjects.tsv.gz von https://doi.org/10.5281/zenodo.7016625
 

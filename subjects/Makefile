@@ -1,4 +1,7 @@
-default: kxp-subjects.pg some-subjects.pg some-subjects.csv
+default: bk__default.jskos.ndjson kxp-subjects.pg some-subjects.pg some-subjects.csv
+
+bk__default.jskos.ndjson:
+	wget https://api.dante.gbv.de/export/download/bk/default/bk__default.jskos.ndjson
 
 kxp-subjects.pg: kxp-subjects.tsv.gz
 	zcat kxp-subjects.tsv.gz | cargo run tsv2pg-rs --release > kxp-subjects.pg
