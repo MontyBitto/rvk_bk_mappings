@@ -1,5 +1,5 @@
-import sys
 from lxml import etree
+import sys
 
 def extract_notations(node, parent=""):
     notations = []
@@ -12,17 +12,11 @@ def extract_notations(node, parent=""):
         notations.extend(extract_notations(child, notation))
     return notations
 
-xml_data = sys.stdin.buffer.read()
-
-xml_str = xml_data.decode('utf-8')
-if xml_str.startswith('<?xml'):
-    xml_str = xml_str.split('?>', 1)[1]
-
-tree = etree.fromstring(xml_str)
-root = tree
+xml_content_bytes = sys.stdin.buffer.read()
+root = etree.XML(xml_content_bytes)
 notations = extract_notations(root)
 
 for narrower, broader in notations:
-    if broader:
-        print(f"\"{narrower}\" -> \"{broader}\" :broader")
-    print(f"\"{narrower}\" :rvk notation:\"{narrower}\"")
+    if broader != "": 
+        print(f"\"http://rvk.uni-regensburg.de/nt/{narrower}\" -> \"http://rvk.uni-regensburg.de/nt/{broader}\" :broader")
+    print(f"\"http://rvk.uni-regensburg.de/nt/{narrower}\" :rvk :concept notation:\"{narrower}\"")   

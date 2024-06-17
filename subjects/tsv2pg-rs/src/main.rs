@@ -1,23 +1,43 @@
-use std::collections::hash_set;
+use std::collections::HashSet;
+use std::io::{self, BufRead};
 
 fn main() {
-    let mut unique = hash_set::HashSet::new();
-    let input = std::io::stdin();
-    for (_index, line) in input.lines().enumerate() {
-        let line2 = &line.unwrap();
-        let mut data = line2.trim().split('\t');
-        let ppn = data.next().unwrap().to_string();
-        let sym = data.next().unwrap();
-        let id = data.next().unwrap();
-        if !unique.contains(&ppn) && (sym == "bk" || sym == "rvk") {
-            println!("\"{}\" :title ppn:\"{}\"", ppn, ppn);
-            unique.insert(ppn.clone());
-        }
-        if sym == "bk" || sym == "rvk" {
-            println!(
-                "\"{}\" -> \"{}\" :subject",
-                ppn, id
-            );
+    let mut unique = HashSet::new();
+    let input = io::stdin();
+    
+    let mut buffer = String::new();
+    let stdin = input.lock();
+    let mut handle = stdin.lines();
+
+    while let Some(Ok(line)) = handle.next() {
+        buffer.clear();
+        buffer.push_str(&line);
+
+        let mut data = buffer.split('\t');
+        
+        if let (Some(ppn), Some(sym), Some(id)) = (data.next(), data.next(), data.next()) {
+            if !unique.contains(ppn) {
+                if sym == "bk" || sym == "rvk" || sym == "sdnb" {
+                    println!("\"{}\" :title ppn:\"{}\"", ppn, ppn);
+                    unique.insert(ppn.to_string());
+                }
+            }
+            
+            match sym {
+                "bk" | "sdnb" => {
+                    println!(
+                        "\"{}\" -> \"http://uri.gbv.de/terminology/{}/{}\" :subject",
+                        ppn, sym, id
+                    );
+                }
+                "rvk" => {
+                    println!(
+                        "\"{}\" -> \"http://rvk.uni-regensburg.de/nt/{}\" :subject",
+                        ppn, id
+                    );
+                }
+                _ => {}
+            }
         }
     }
 }
