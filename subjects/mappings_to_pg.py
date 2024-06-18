@@ -22,12 +22,13 @@ def fetch_mappings(from_scheme, to_scheme):
 
 def get_all_mappings(schemes):
     mapping_data = []
-    for from_scheme in schemes:
-        for to_scheme in schemes:
-            if from_scheme != to_scheme:
-                response = fetch_mappings(from_scheme, to_scheme)
-                for item in response:
-                    process_item(mapping_data, item)
+    for i in range(len(schemes)):
+        for j in range(i + 1, len(schemes)):
+            from_scheme = schemes[i]
+            to_scheme = schemes[j]
+            response = fetch_mappings(from_scheme, to_scheme)
+            for item in response:
+                process_item(mapping_data, item)
     return mapping_data
 
 def parse_schemes(input_str):

@@ -16,7 +16,7 @@ Mit `./import.sh subjects` in `pgraphs/neo4j` wird ein Neo4j docker erstellt mit
 
 ### Nutzen des Graphen
 
-In dem Graph sind Mappings immer von RVK auf BK gerichtet und Sachgebiete von der PPN auf die Notation gerichtet.
+In dem Graph sind Sachgebiete von der PPN auf die Notation gerichtet.
 
 Durch Cypher Befehle kann man in Neo4j jetzt Informationen erhalten. Z. B. welche RVK-Notationen haben ein “exactMatch” oder “narrowMatch” mit BK-Notationen, die mit PPNs verbunden werden können `MATCH p=((r:rvk)-[m]->(b:bk)<-[]-(t:title)) WHERE m.relation = 'exactMatch' or m.relation = 'narrowMatch' RETURN p`. Mit so einer Frage ließen sich PPNs finden, die noch mit RVK angereichert werden können.
 

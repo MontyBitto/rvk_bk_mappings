@@ -1,5 +1,7 @@
 default: downloads kxp-subjects.pg some-subjects.pg some-subjects.csv
 
+csv: some-subjects.pg some-subjects.csv
+
 downloads: rvko_xml.zip bk__default.jskos.ndjson sdnb-concepts.ndjson kxp-subjects
 
 rvko_xml.zip:
@@ -9,7 +11,7 @@ bk__default.jskos.ndjson:
 	wget https://api.dante.gbv.de/export/download/bk/default/bk__default.jskos.ndjson
 
 sdnb-concepts.ndjson:
-	curl https://raw.githubusercontent.com/gbv/jskos-data/master/sdnb/sdnb-concepts.ndjson > sdnb-concepts.ndjson
+	wget https://raw.githubusercontent.com/gbv/jskos-data/master/sdnb/sdnb-concepts.ndjson
 
 kxp-subjects:
 	curl -L "https://zenodo.org/api/records/7016625" | jq -r '.files[] | select(.key | endswith(".tsv.gz")) | .links.self' | xargs wget
